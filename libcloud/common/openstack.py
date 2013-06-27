@@ -40,7 +40,8 @@ AUTH_VERSIONS_WITH_EXPIRES = [
     '1.1',
     '2.0',
     '2.0_apikey',
-    '2.0_password'
+    '2.0_password',
+    '2.0_keypair'
 ]
 
 # How many seconds to substract from the auth token expiration time before
@@ -150,6 +151,8 @@ class OpenStackAuthConnection(ConnectionUserAndKey):
             return self.authenticate_2_0_with_apikey()
         elif self.auth_version == "2.0_password":
             return self.authenticate_2_0_with_password()
+        elif self.auth_version == "2.0_keypair":
+            return self.authenticate_2_0_with_keypair()
         else:
             raise LibcloudError('Unsupported Auth Version requested')
 
@@ -240,9 +243,20 @@ class OpenStackAuthConnection(ConnectionUserAndKey):
         # Password based authentication is the only 'core' authentication
         # method in Keystone at this time.
         # 'keystone' - http://s.apache.org/e8h
-        data = {'auth': \
-                {'passwordCredentials': \
+        data = {'auth':
+                {'passwordCredentials':
                  {'username': self.user_id, 'password': self.key}}}
+        if self.tenant_name:
+            data['auth']['tenantName'] = self.tenant_name
+        reqbody = json.dumps(data)
+        return self.authenticate_2_0_with_body(reqbody)
+
+    def authenticate_2_0_with_keypair(self):
+        # API Key and Secret Key authentication.
+        # Used by HP Cloud
+        data = {'auth':
+                {'apiAccessKeyCredentials':
+                 {'accessKey': self.user_id, 'secretKey': self.key}}}
         if self.tenant_name:
             data['auth']['tenantName'] = self.tenant_name
         reqbody = json.dumps(data)
